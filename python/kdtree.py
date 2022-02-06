@@ -1,8 +1,6 @@
-from email.errors import NonPrintableDefect
+import copy
 import math
-from mimetypes import guess_all_extensions
 from random import random
-from tkinter import W
 
 
 class Node:
@@ -24,7 +22,7 @@ class kdtree:
 
     def nnsearch(self, query):
         min_dist = 100000 # TODO infinity
-        guess = self._nnsearch_recursive(self.node, query, min_dist)
+        guess, _ = self._nnsearch_recursive(self.node, query, min_dist, query)
         return guess
         
     def _build_recursive(self, point_list, depth=0):
@@ -41,10 +39,10 @@ class kdtree:
         # 中央値となるインデックスを算出
         median = (len(point_list) - 1) // 2
 
-        print(axis)
-        print(median)
-        print(point_list)
-        print('-----------------')
+        # print(axis)
+        # print(median)
+        # print(point_list)
+        # print('-----------------')
 
         node = Node()
         node.location = point_list[median]
@@ -55,27 +53,43 @@ class kdtree:
         return node
 
 
-    def _nnsearch_recursive(self, node, query, min_dist):
+    def _nnsearch_recursive(self, node, query, min_dist, guess):
 
+        # Assuming the end of tree
+        if not node:
+            return guess, min_dist 
+
+        # update nearest neighbor point 
         current_point = node.location
         dist = self._distance(current_point, query)
         if dist < min_dist:
             min_dist = dist
             guess = current_point
         
-        # 比較する軸を選択
+        print(f'dist: {dist}, min_dist: {min_dist}, current_point: {current_point}')
+
+        # select axis to compare and update next_node
         axis = node.axis
         if query[axis] < current_point[axis]:
             next_node = node.lhs
+            next_node_ = node.rhs
         else:
             next_node = node.rhs
+            next_node_ = node.lhs
+         
+        # step into next_node
+        # also return min_dist as min_dist update recursively
+        guess, min_dist = self._nnsearch_recursive(next_node, query, min_dist, guess)
+
+        # check neighbor node
+        diff = abs(query[axis] - current_point[axis])
+        if diff < min_dist:
+            guess, min_dist = self._nnsearch_recursive(next_node_, query, min_dist, guess)
         
-        guess = self._nnsearch_recursive(self, next_node, query, min_dist)
-
-        return guess
+        return guess, min_dist
 
 
-    def _distance(p1, p2):
+    def _distance(self, p1, p2):
        """
        p1, p2: list n-dimention
        """ 
@@ -84,7 +98,22 @@ class kdtree:
            dist += (element1 - element2) * (element1 - element2)
        return math.sqrt(dist)
 
-
+def test_nnsearch(point_list, query):
+    def distance(p1, p2):
+        dist = 0
+        for element1, element2 in zip(p1, p2):
+            dist += (element1 - element2) * (element1 - element2)
+        return math.sqrt(dist)
+    
+    min_dist = 100000
+    min_point = copy.copy(query)
+    for point in point_list:
+        dist = distance(point, query)
+        if dist < min_dist:
+            min_dist = dist
+            min_point = copy.copy(point)
+            
+    return min_dist, min_point
         
 
 if __name__ == '__main__':
@@ -95,6 +124,15 @@ if __name__ == '__main__':
     kdtree = kdtree(point_list)    
     kdtree.build()
 
+    print('kdtree create----------------')
     print(kdtree.node.location)
     print(kdtree.node.axis)
 
+    print('nnsearch----------------------')
+    # nnsearch 
+    query = [2,2]
+    guess = kdtree.nnsearch(query)
+    print(guess)
+    
+    answer, answer_point = test_nnsearch(point_list, query)
+    print(f'answer nnsearch: {answer_point}')
