@@ -1,6 +1,8 @@
 import copy
+import heapq
 import math
 from random import random
+from tkinter import W
 
 
 class Node:
@@ -24,6 +26,15 @@ class kdtree:
         min_dist = 100000 # TODO infinity
         guess, _ = self._nnsearch_recursive(self.node, query, min_dist, query)
         return guess
+    
+    def knnsearch(self, query, k):
+        min_dist = 100000 # TODO infinity
+        guess_list = []
+        guess_list = self._knnsearch_recursive(self.node, query, guess_list, k)
+
+        # return only k-position 
+        return [pos for (dist, pos) in guess_list][:k]
+
         
     def _build_recursive(self, point_list, depth=0):
         if not point_list:
@@ -88,6 +99,36 @@ class kdtree:
         
         return guess, min_dist
 
+    def _knnsearch_recursive(self, node, query, guess_list, k):
+        # assuming the end of tree
+        if not node:
+            return guess_list
+
+        # add current position and dist to candidate list
+        current_point = node.location
+        dist = self._distance(current_point, query)
+        guess_list.append((dist, current_point))
+        # print(guess_list)
+        guess_list.sort(key=lambda x: x[0])
+        
+        # update axis for compare and update next_node
+        axis = node.axis
+        if query[axis] < current_point[axis]:
+            next_node = node.lhs
+            next_node_ = node.rhs
+        else:
+            next_node = node.rhs
+            next_node_ = node.lhs
+        
+        # step into next_node
+        guess_list = self._knnsearch_recursive(next_node, query, guess_list, k)
+
+        diff = abs(query[axis] - current_point[axis])
+        if (len(guess_list) < k) or (diff < guess_list[-1][0]):
+            self._knnsearch_recursive(next_node_, query, guess_list, k)
+        
+        return guess_list
+        
 
     def _distance(self, p1, p2):
        """
@@ -136,3 +177,7 @@ if __name__ == '__main__':
     
     answer, answer_point = test_nnsearch(point_list, query)
     print(f'answer nnsearch: {answer_point}')
+    
+    print('knnsearch--------------')
+    knn_list = kdtree.knnsearch(query, 2)
+    print(knn_list)
