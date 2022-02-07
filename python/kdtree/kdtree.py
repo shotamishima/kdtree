@@ -17,22 +17,31 @@ class kdtree:
         self.point_list = point_list
         self.node = Node()
 
+
     def build(self, depth=0, leaf_size=4):
         self.node = self._build_recursive(self.point_list, depth)
+
 
     def nnsearch(self, query):
         min_dist = 100000 # TODO infinity
         guess, _ = self._nnsearch_recursive(self.node, query, min_dist, query)
         return guess
     
+
     def knnsearch(self, query, k):
-        min_dist = 100000 # TODO infinity
         guess_list = []
         guess_list = self._knnsearch_recursive(self.node, query, guess_list, k)
 
         # return only k-position 
-        return [pos for (dist, pos) in guess_list][:k]
+        return [pos for (dist, pos) in guess_list][:k], [dist for (dist, pos) in guess_list][:k]
 
+
+    def radius_search(self, query, radius):
+        guess_list = []
+        guess_list = self._radius_search_recursive(self.node, query, guess_list, radius)
+
+        return [pos for (dist, pos) in guess_list], [dist for (dist, pos) in guess_list]
+        
         
     def _build_recursive(self, point_list, depth=0):
         if not point_list:
@@ -123,10 +132,39 @@ class kdtree:
 
         diff = abs(query[axis] - current_point[axis])
         if (len(guess_list) < k) or (diff < guess_list[-1][0]):
-            self._knnsearch_recursive(next_node_, query, guess_list, k)
+            guess_list = self._knnsearch_recursive(next_node_, query, guess_list, k)
         
         return guess_list
         
+    def _radius_search_recursive(self, node, query, guess_list, radius):
+        # assuming the end of tree
+        if not node:
+            return guess_list
+        
+        # append current position if dist < radius
+        current_point = node.location
+        dist = self._distance(current_point, query)
+        if dist < radius:
+            guess_list.append((dist, current_point))
+
+        # update axis for compare and update next node
+        axis = node.axis
+        if query[axis] < current_point[axis]:
+            next_node = node.lhs
+            next_node_ = node.rhs
+        else:
+            next_node = node.rhs
+            next_node_ = node.lhs
+        
+        guess_list = self._radius_search_recursive(next_node, query, guess_list, radius)
+
+        # search neghbor tree if parent dist < radius
+        diff = abs(query[axis] - current_point[axis])
+        if (diff < radius):
+            guess_list = self._radius_search_recursive(next_node_, query, guess_list, radius)
+
+        return guess_list
+
 
     def _distance(self, p1, p2):
        """
