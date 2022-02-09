@@ -1,1 +1,15 @@
+# scala
+target/
+project/**/target/
+
+# metals
+.metals
+.bsp
+.bloop
+project/**/metals.sbt
+
+# python
 __pycache__/
+
+# vscode
+.vscode
