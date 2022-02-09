@@ -11,16 +11,16 @@ object Main extends App {
 
     val kdtree = new KdTree()
 
-    val n = kdtree.build(pointList)
+    kdtree.build(pointList)
     
-    n match {
-        case Some(n) => {
-            println("yes node")
-            println(n.location)
-            println(n.lhs.get.location)
-        }
-        case None => println("non node")
-    }
+    // n match {
+    //     case Some(n) => {
+    //         println("yes node")
+    //         println(n.location)
+    //         println(n.lhs)
+    //     }
+    //     case None => println("non node")
+    // }
     
     def createSamplePoint(size: Int): mutable.ArrayBuffer[Position] = {
         val r = new Random
