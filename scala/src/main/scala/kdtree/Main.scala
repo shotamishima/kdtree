@@ -9,25 +9,23 @@ object Main extends App {
     val pointList = createSamplePoint(10)
     println(s"pointList: $pointList")
 
+    // build kd-tree
     val kdtree = new KdTree()
-
     kdtree.build(pointList)
     
-    // n match {
-    //     case Some(n) => {
-    //         println("yes node")
-    //         println(n.location)
-    //         println(n.lhs)
-    //     }
-    //     case None => println("non node")
-    // }
+    // nearest neighbor search
+    println("nn search --------------------------")
+    val query = List(2.0, 2.0)
+    val (nnpoint, nndist) = kdtree.nnSearch(query)
+    println(nnpoint)
+    println(nndist)
     
-    def createSamplePoint(size: Int): mutable.ArrayBuffer[Position] = {
+    def createSamplePoint(size: Int): mutable.ArrayBuffer[List[Double]] = {
         val r = new Random
         val xs = for ( i <- 0 to size ) yield r.nextInt(size).toDouble
         val ys = for ( i <- 0 to size ) yield r.nextInt(size).toDouble
         
-        val pointList = for ( (x, y) <- xs.zip(ys) ) yield Position(x, y)
+        val pointList = for ( (x, y) <- xs.zip(ys) ) yield List(x, y)
         mutable.ArrayBuffer(pointList: _*)
 
     }
