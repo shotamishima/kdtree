@@ -19,7 +19,14 @@ object Main extends App {
     val (nnpoint, nndist) = kdtree.nnSearch(query)
     println(nnpoint)
     println(nndist)
-    
+    println()
+    // k-nearest neighbor search
+    println("knn search -------------------------")
+    val (knnDistList, knnPointList) = kdtree.knnSearch(query, 4)
+    println(knnDistList)
+    println(knnPointList)
+    println()
+
     def createSamplePoint(size: Int): mutable.ArrayBuffer[List[Double]] = {
         val r = new Random
         val xs = for ( i <- 0 to size ) yield r.nextInt(size).toDouble

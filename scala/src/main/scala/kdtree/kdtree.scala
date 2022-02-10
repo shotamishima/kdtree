@@ -3,6 +3,7 @@ package kdtree
 import collection.mutable
 import math.{abs, sqrt}
 import scala.annotation.tailrec
+import scala.annotation.varargs
 
 case class Position(val x: Double, val y: Double)
 
@@ -12,6 +13,8 @@ class Node {
     var rhs: Option[Node] = None 
     var axis = 0
 }
+
+class KnnPoint(val dist: Double, val point: List[Double])
 
 class KdTree {
 
@@ -27,11 +30,21 @@ class KdTree {
         }
     }
    
-    def nnSearch(query: List[Double]) = {
-        var minDist = 10000000 // TODO: change to infinity
-        var guess = List(0.0, 0.0)
+    def nnSearch(query: List[Double]): Tuple2[List[Double], Double] = {
+        val minDist = 10000000 // TODO: change to infinity
+        val guess = List(0.0, 0.0)
         nnSearchRecursive(Option(node), query, minDist, guess)
-        
+    }
+    
+    def knnSearch(query: List[Double], k: Int): Tuple2[mutable.ArrayBuffer[Double], mutable.ArrayBuffer[List[Double]]] = {
+        val guessList = mutable.ArrayBuffer[KnnPoint]()
+        val guessListReturn = knnSearchRecursive(Option(node), query, guessList, k)
+
+        // extend
+        val knnDistList = for ( knnPoint <- guessListReturn.slice(0, k) ) yield knnPoint.dist
+        val knnPointList = for ( knnPoint <- guessListReturn.slice(0, k) ) yield knnPoint.point
+
+        (knnDistList, knnPointList)
     }
 
     private def buildRecursive(pointList: mutable.ArrayBuffer[List[Double]], 
@@ -48,12 +61,6 @@ class KdTree {
             val sortedPoints = pointList.sortBy(_(axis))
             // calculate index located in median 
             val median: Int = (sortedPoints.length - 1) / 2 
-            
-            println(axis)
-            println(median)
-            println(sortedPoints(median))
-            println(sortedPoints)
-            println("************************")
             
             val node = new Node
             node.location = sortedPoints(median)
@@ -92,13 +99,6 @@ class KdTree {
                 } else {
                     (node.rhs, node.lhs)
                 }
-                // if ( query(axis) < currentPoint(axis) ) {
-                //     val nextNode = node.lhs
-                //     val nextNode_ = node.rhs
-                // } else {
-                //     val nextNode = node.rhs
-                //     val nextNode_ = node.lhs
-                // }
                 
                 // step into next node
                 val (guessReturn, minDistReturn) = nnSearchRecursive(nextNode, query, minDistUpdate, guessUpdate)
@@ -106,7 +106,8 @@ class KdTree {
                 // check neighbor node
                 val diff = abs(query(axis) - currentPoint(axis))
                 if ( diff < minDist ) {
-                    val (guessReturn, minDistReturn) = nnSearchRecursive(nextNode_, query, minDistUpdate, guessUpdate)
+                    val (guessReturnIf, minDistReturnIf) = nnSearchRecursive(nextNode_, query, minDistReturn, guessReturn)
+                    return (guessReturnIf, minDistReturnIf)
                 }
                 (guessReturn, minDistReturn)
             }
@@ -116,6 +117,45 @@ class KdTree {
         }
     }
     
+    private def knnSearchRecursive(node: Option[Node],
+                                   query: List[Double],
+                                   guessList: mutable.ArrayBuffer[KnnPoint],
+                                   k: Int
+                                   ): mutable.ArrayBuffer[KnnPoint] = {
+        node match {
+            case Some(node) => {
+                // add current point and dist from query into guessList
+                val currentPoint = node.location
+                val dist = distance(query, currentPoint)
+                guessList += (new KnnPoint(dist, currentPoint))
+                val sortedGuessList = guessList.sortBy(_.dist)
+
+                // update axis for compare and update next node
+                val axis = node.axis
+                val (nextNode, nextNode_) = if ( query(axis) < currentPoint(axis) ) {
+                    (node.lhs, node.rhs)
+                } else {
+                    (node.rhs, node.lhs)
+                }
+
+                // step into next node
+                val guessListReturn = knnSearchRecursive(nextNode, query, sortedGuessList, k)
+
+                // check neighbor node
+                val diff = abs(query(axis) - currentPoint(axis))
+                if ( sortedGuessList.length < k || diff < guessListReturn(guessListReturn.length-1).dist ) {
+                    val guessListReturnIf = knnSearchRecursive(nextNode_, query, guessListReturn, k)
+                    return guessListReturnIf
+                }
+                guessListReturn
+            }
+            case None => {
+                guessList
+            }
+        }
+        
+    }
+
     private def distance(p1: List[Double], p2: List[Double]): Double = {
         var dist = 0.0
         for ( (elem1, elem2) <- p1.zip(p2) ) {
