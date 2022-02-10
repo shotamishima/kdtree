@@ -6,7 +6,7 @@ import util.Random
 object Main extends App {
 
     // create sample points
-    val pointList = createSamplePoint(10)
+    val pointList = createSamplePoint(100)
     println(s"pointList: $pointList")
 
     // build kd-tree
@@ -25,6 +25,12 @@ object Main extends App {
     val (knnDistList, knnPointList) = kdtree.knnSearch(query, 4)
     println(knnDistList)
     println(knnPointList)
+    println()
+    // radius search
+    println("radius search ----------------------")
+    val (radiusDistList, radiusPointList) = kdtree.radiusSearch(query, 50)
+    println(radiusDistList)
+    println(radiusPointList)
     println()
 
     def createSamplePoint(size: Int): mutable.ArrayBuffer[List[Double]] = {

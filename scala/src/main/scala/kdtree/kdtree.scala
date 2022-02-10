@@ -14,7 +14,8 @@ class Node {
     var axis = 0
 }
 
-class KnnPoint(val dist: Double, val point: List[Double])
+// using knnSearch and radiusSearch
+class nPoint(val dist: Double, val point: List[Double])
 
 class KdTree {
 
@@ -37,7 +38,7 @@ class KdTree {
     }
     
     def knnSearch(query: List[Double], k: Int): Tuple2[mutable.ArrayBuffer[Double], mutable.ArrayBuffer[List[Double]]] = {
-        val guessList = mutable.ArrayBuffer[KnnPoint]()
+        val guessList = mutable.ArrayBuffer[nPoint]()
         val guessListReturn = knnSearchRecursive(Option(node), query, guessList, k)
 
         // extend
@@ -45,6 +46,17 @@ class KdTree {
         val knnPointList = for ( knnPoint <- guessListReturn.slice(0, k) ) yield knnPoint.point
 
         (knnDistList, knnPointList)
+    }
+    
+    def radiusSearch(query: List[Double], radius: Double): Tuple2[mutable.ArrayBuffer[Double], mutable.ArrayBuffer[List[Double]]] = {
+        val guessList = mutable.ArrayBuffer[nPoint]()
+        val guessListReturn = radiusSearchRecursive(Option(node), query, guessList, radius)
+        
+        // extend 
+        val distList = for ( npoint <- guessListReturn ) yield npoint.dist
+        val pointList = for ( npoint <- guessListReturn ) yield npoint.point
+        
+        (distList, pointList)
     }
 
     private def buildRecursive(pointList: mutable.ArrayBuffer[List[Double]], 
@@ -119,15 +131,15 @@ class KdTree {
     
     private def knnSearchRecursive(node: Option[Node],
                                    query: List[Double],
-                                   guessList: mutable.ArrayBuffer[KnnPoint],
+                                   guessList: mutable.ArrayBuffer[nPoint],
                                    k: Int
-                                   ): mutable.ArrayBuffer[KnnPoint] = {
+                                   ): mutable.ArrayBuffer[nPoint] = {
         node match {
             case Some(node) => {
                 // add current point and dist from query into guessList
                 val currentPoint = node.location
                 val dist = distance(query, currentPoint)
-                guessList += (new KnnPoint(dist, currentPoint))
+                guessList += (new nPoint(dist, currentPoint))
                 val sortedGuessList = guessList.sortBy(_.dist)
 
                 // update axis for compare and update next node
@@ -154,6 +166,45 @@ class KdTree {
             }
         }
         
+    }
+
+    private def radiusSearchRecursive(node: Option[Node],
+                                      query: List[Double],
+                                      guessList: mutable.ArrayBuffer[nPoint],
+                                      radius: Double
+                                      ): mutable.ArrayBuffer[nPoint] = {
+        node match {
+            case Some(node) => {
+                // append curernt position if dist < radius
+                val currentPoint = node.location
+                val dist = distance(query, currentPoint)
+                if ( dist < radius ) {
+                    guessList += (new nPoint(dist, currentPoint))
+                }
+
+                // update axis for compare and update next node
+                val axis = node.axis
+                val (nextNode, nextNode_) = if ( query(axis) < currentPoint(axis) ) {
+                    (node.lhs, node.rhs)
+                } else {
+                    (node.rhs, node.lhs)
+                }
+
+                // step into next node
+                val guessListReturn = radiusSearchRecursive(nextNode, query, guessList, radius)
+
+                // search neighbor tree if parent dist < radius
+                val diff = abs(query(axis) - currentPoint(axis))
+                if ( diff < radius ) {
+                    val guessListReturnIf = radiusSearchRecursive(nextNode_, query, guessListReturn, radius)
+                    return guessListReturnIf
+                }
+                guessListReturn
+            }
+            case None => {
+                guessList
+            }
+        }
     }
 
     private def distance(p1: List[Double], p2: List[Double]): Double = {
